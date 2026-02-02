@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sonsuz Sevgiyle</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            overflow: hidden;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas { 
+            display: block; 
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #startScreen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 10;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+        }
+        #startScreen h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px red;
+        }
+        #startScreen p {
+            font-size: 1.2em;
+            opacity: 0.8;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+        #cornerNames {
+            position: absolute;
+            bottom: 20px;
+            right: 25px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1em;
+            font-weight: bold;
+            z-index: 5;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<audio id="bgMusic" loop>
+    <source src="muzik.mp3" type="audio/mpeg">
+</audio>
+
+<div id="startScreen">
+    <h1>❤️ Sürpriz ❤️</h1>
+    <p>Başlamak için ekrana dokun...</p>
+</div>
+
+<canvas id="heartCanvas"></canvas>
+
+<div id="cornerNames">
+    Yahya & Nazlı
+</div>
+
+<script>
+    const canvas = document.getElementById('heartCanvas');
+    const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('startScreen');
+    const bgMusic = document.getElementById('bgMusic');
+
+    let scale, centerX, centerY;
+    let stars = [];
+    let animationStarted = false;
+    let pulseAngle = 0; // Nefes alma efekti için değişken
+
+    function startEverything() {
+        if (animationStarted) return;
+        startScreen.style.display = 'none'; 
+        bgMusic.play().catch(e => console.log("Müzik hatası:", e)); 
+        animationStarted = true; 
+        draw(); 
+    }
+
+    startScreen.addEventListener('click', startEverything);
+    startScreen.addEventListener('touchstart', startEverything, {passive: true});
+
+    function createStars() {
+        stars = [];
+        for (let i = 0; i < 120; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 1.4,
+                speed: Math.random() * 0.3 + 0.1,
+                opacity: Math.random()
+            });
+        }
+    }
+
+    function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        centerX = canvas.width / 2;
+        centerY = canvas.height / 2;
+        scale = Math.min(canvas.width, canvas.height) / 40;
+        createStars();
+    }
+
+    init();
+
+    let progress = 0;
+    let fillProgress = 0;
+    let phase = 'PATH';
+    let delayTimer = 0;
+
+    const words = [
+        { text: "Seni", y: null, opacity: 0, targetYOffset: -1.1 },      
+        { text: "Seviyorum", y: null, opacity: 0, targetYOffset: 0.1 },    
+        { text: "Çiçeğim", y: null, opacity: 0, targetYOffset: 1.3 }     
+    ];
+    let currentWordIndex = 0;
+
+    // Nefes alma efekti için scale çarpanı eklenmiş hali
+    function getHeartPoint(t, side, currentScale) {
+        const x = 16 * Math.pow(Math.sin(t * side), 3);
+        const y = -(13 * Math.cos(t * side) - 5 * Math.cos(2 * t * side) - 2 * Math.cos(3 * t * side) - Math.cos(4 * t * side));
+        return { x: centerX + x * currentScale, y: centerY + (y + 2) * currentScale };
+    }
+
+    function drawStars() {
+        ctx.fillStyle = "white";
+        stars.forEach(star => {
+            ctx.globalAlpha = star.opacity;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+            star.y += star.speed;
+            if (star.y > canvas.height) star.y = 0;
+            star.opacity += (Math.random() - 0.5) * 0.02;
+            if (star.opacity < 0.1) star.opacity = 0.1;
+            if (star.opacity > 0.8) star.opacity = 0.8;
+        });
+        ctx.globalAlpha = 1.0;
+    }
+
+    function draw() {
+        if (!animationStarted) return;
+
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawStars();
+
+        // Nefes alma hesaplaması (Sinüs dalgası)
+        pulseAngle += 0.03;
+        // Orijinal scale üzerine %0 ila %3 arası küçük bir oynama ekler
+        let currentPulseScale = scale * (1 + Math.sin(pulseAngle) * 0.03);
+
+        if (phase === 'PATH') {
+            progress += 0.005;
+            if (progress > Math.PI) progress = Math.PI;
+
+            ctx.save();
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#ff0000';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff0000';
+            ctx.lineCap = 'round';
+
+            [1, -1].forEach(side => {
+                ctx.beginPath();
+                for(let i=0; i <= progress; i += 0.02) {
+                    let p = getHeartPoint(i, side, currentPulseScale);
+                    if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            const posL = getHeartPoint(progress, -1, currentPulseScale);
+            const posR = getHeartPoint(progress, 1, currentPulseScale);
+            drawNeonSphere(posL.x, posL.y);
+            drawNeonSphere(posR.x, posR.y);
+
+            if (progress >= Math.PI) phase = 'FILLING';
+
+        } else if (phase === 'FILLING') {
+            fillProgress += 0.01;
+            drawHeartShape(fillProgress, true, currentPulseScale);
+            if (fillProgress >= 1) phase = 'DELAY';
+
+        } else if (phase === 'DELAY') {
+            drawHeartShape(1, true, currentPulseScale);
+            delayTimer++;
+            if (delayTimer > 40) phase = 'FINAL';
+
+        } else if (phase === 'FINAL') {
+            drawHeartShape(1, true, currentPulseScale);
+
+            let fontSize = Math.max(22, scale * 2.5);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "white";
+
+            let baseCenterY = centerY + (scale * 2) + 30;
+
+            words.forEach((word, index) => {
+                let targetY = baseCenterY + (word.targetYOffset * (fontSize * 0.9));
+                if (word.y === null) word.y = targetY - 40;
+
+                if (index <= currentWordIndex) {
+                    if (word.opacity < 1) word.opacity += 0.01;
+                    word.y += (targetY - word.y) * 0.025; 
+
+                    ctx.font = `bold ${fontSize}px 'Segoe UI', Arial, sans-serif`;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${word.opacity})`;
+                    ctx.fillText(word.text, centerX, word.y);
+                }
+            });
+
+            if (currentWordIndex < words.length - 1) {
+                 if (words[currentWordIndex].opacity > 0.95) {
+                    currentWordIndex++;
+                }
+            }
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    function drawNeonSphere(x, y) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, scale * 0.7, 0, Math.PI * 2);
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = "#ff0000";
+        ctx.fillStyle = "#ff0000";
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawHeartShape(opacity, isNeon, currentPulseScale) {
+        ctx.save();
+        ctx.beginPath();
+        for (let t = 0; t <= Math.PI; t += 0.01) {
+            const p = getHeartPoint(t, 1, currentPulseScale);
+            if (t === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        for (let t = Math.PI; t >= 0; t -= 0.01) {
+            const p = getHeartPoint(t, -1, currentPulseScale);
+            ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        
+        if (isNeon) {
+            ctx.shadowBlur = 25; 
+            ctx.shadowColor = "rgba(255, 0, 0, 0.8)";
+            ctx.fillStyle = `rgba(196, 0, 0, ${opacity})`;
+        } else {
+            ctx.fillStyle = "#c40000";
+        }
+        
+        ctx.fill();
+        ctx.restore();
+    }
+
+    window.addEventListener('resize', init);
+</script>
+</body>
+</html>
