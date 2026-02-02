@@ -61,7 +61,7 @@
 </head>
 <body>
 
-<audio id="bgMusic" loop>
+<audio id="bgMusic" loop preload="auto" playsinline>
     <source src="muzik.mp3" type="audio/mpeg">
 </audio>
 
@@ -85,12 +85,23 @@
     let scale, centerX, centerY;
     let stars = [];
     let animationStarted = false;
-    let pulseAngle = 0; // Nefes alma efekti için değişken
+    let pulseAngle = 0; 
 
+    // Müziği başlatan ana fonksiyon
     function startEverything() {
         if (animationStarted) return;
+        
+        // Müziği çalmayı dene
+        bgMusic.play().then(() => {
+            console.log("Müzik başladı");
+        }).catch(e => {
+            console.log("Otomatik oynatma engellendi, alternatif deneniyor...");
+            // Bazı cihazlar için ek önlem
+            bgMusic.muted = false;
+            bgMusic.play();
+        });
+
         startScreen.style.display = 'none'; 
-        bgMusic.play().catch(e => console.log("Müzik hatası:", e)); 
         animationStarted = true; 
         draw(); 
     }
@@ -134,7 +145,6 @@
     ];
     let currentWordIndex = 0;
 
-    // Nefes alma efekti için scale çarpanı eklenmiş hali
     function getHeartPoint(t, side, currentScale) {
         const x = 16 * Math.pow(Math.sin(t * side), 3);
         const y = -(13 * Math.cos(t * side) - 5 * Math.cos(2 * t * side) - 2 * Math.cos(3 * t * side) - Math.cos(4 * t * side));
@@ -165,9 +175,7 @@
 
         drawStars();
 
-        // Nefes alma hesaplaması (Sinüs dalgası)
         pulseAngle += 0.03;
-        // Orijinal scale üzerine %0 ila %3 arası küçük bir oynama ekler
         let currentPulseScale = scale * (1 + Math.sin(pulseAngle) * 0.03);
 
         if (phase === 'PATH') {
@@ -192,94 +200,3 @@
             ctx.restore();
 
             const posL = getHeartPoint(progress, -1, currentPulseScale);
-            const posR = getHeartPoint(progress, 1, currentPulseScale);
-            drawNeonSphere(posL.x, posL.y);
-            drawNeonSphere(posR.x, posR.y);
-
-            if (progress >= Math.PI) phase = 'FILLING';
-
-        } else if (phase === 'FILLING') {
-            fillProgress += 0.01;
-            drawHeartShape(fillProgress, true, currentPulseScale);
-            if (fillProgress >= 1) phase = 'DELAY';
-
-        } else if (phase === 'DELAY') {
-            drawHeartShape(1, true, currentPulseScale);
-            delayTimer++;
-            if (delayTimer > 40) phase = 'FINAL';
-
-        } else if (phase === 'FINAL') {
-            drawHeartShape(1, true, currentPulseScale);
-
-            let fontSize = Math.max(22, scale * 2.5);
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "white";
-
-            let baseCenterY = centerY + (scale * 2) + 30;
-
-            words.forEach((word, index) => {
-                let targetY = baseCenterY + (word.targetYOffset * (fontSize * 0.9));
-                if (word.y === null) word.y = targetY - 40;
-
-                if (index <= currentWordIndex) {
-                    if (word.opacity < 1) word.opacity += 0.01;
-                    word.y += (targetY - word.y) * 0.025; 
-
-                    ctx.font = `bold ${fontSize}px 'Segoe UI', Arial, sans-serif`;
-                    ctx.fillStyle = `rgba(255, 255, 255, ${word.opacity})`;
-                    ctx.fillText(word.text, centerX, word.y);
-                }
-            });
-
-            if (currentWordIndex < words.length - 1) {
-                 if (words[currentWordIndex].opacity > 0.95) {
-                    currentWordIndex++;
-                }
-            }
-        }
-
-        requestAnimationFrame(draw);
-    }
-
-    function drawNeonSphere(x, y) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, scale * 0.7, 0, Math.PI * 2);
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = "#ff0000";
-        ctx.fillStyle = "#ff0000";
-        ctx.fill();
-        ctx.restore();
-    }
-
-    function drawHeartShape(opacity, isNeon, currentPulseScale) {
-        ctx.save();
-        ctx.beginPath();
-        for (let t = 0; t <= Math.PI; t += 0.01) {
-            const p = getHeartPoint(t, 1, currentPulseScale);
-            if (t === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-        }
-        for (let t = Math.PI; t >= 0; t -= 0.01) {
-            const p = getHeartPoint(t, -1, currentPulseScale);
-            ctx.lineTo(p.x, p.y);
-        }
-        ctx.closePath();
-        
-        if (isNeon) {
-            ctx.shadowBlur = 25; 
-            ctx.shadowColor = "rgba(255, 0, 0, 0.8)";
-            ctx.fillStyle = `rgba(196, 0, 0, ${opacity})`;
-        } else {
-            ctx.fillStyle = "#c40000";
-        }
-        
-        ctx.fill();
-        ctx.restore();
-    }
-
-    window.addEventListener('resize', init);
-</script>
-</body>
-</html>
